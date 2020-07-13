@@ -141,14 +141,14 @@ class NestedGraph(Graph):
             if state.get('children', []):
                 cluster_name = "cluster_" + name
                 with container.subgraph(name=cluster_name,
-                                        graph_attr=self.machine.style_attributes['graph']['default']) as sub:
+                                                    graph_attr=self.machine.style_attributes['graph']['default']) as sub:
                     style = self.custom_styles['node'][name] or default_style
                     sub.graph_attr.update(label=label, rank='source', **self.machine.style_attributes['graph'][style])
                     self._cluster_states.append(name)
                     is_parallel = isinstance(state.get('initial', ''), list)
-                    width = '0.0' if is_parallel else '0.1'
                     with sub.subgraph(name=cluster_name + '_root',
-                                      graph_attr={'label': '', 'color': 'None', 'rank': 'min'}) as root:
+                                                      graph_attr={'label': '', 'color': 'None', 'rank': 'min'}) as root:
+                        width = '0.0' if is_parallel else '0.1'
                         root.node(name + "_anchor", shape='point', fillcolor='black', width=width)
                     self._add_nodes(state['children'], sub, default_style='parallel' if is_parallel else 'default',
                                     prefix=prefix + state['name'] + self.machine.state_cls.separator)

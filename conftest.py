@@ -10,6 +10,4 @@ async_files = ['test_async.py', 'asyncio.py']
 
 
 def pytest_ignore_collect(path):
-    if not with_async and basename(str(path)) in async_files:
-        return True
-    return False
+    return not with_async and basename(str(path)) in async_files

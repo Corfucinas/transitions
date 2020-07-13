@@ -28,10 +28,7 @@ class TestDiagrams(TestTransitions):
     use_pygraphviz = False
 
     def parse_dot(self, graph):
-        if self.use_pygraphviz:
-            dot = graph.string()
-        else:
-            dot = graph.source
+        dot = graph.string() if self.use_pygraphviz else graph.source
         nodes = []
         edges = []
         for line in dot.split('\n'):
@@ -168,10 +165,7 @@ class TestDiagrams(TestTransitions):
         m.add_transition('reflexive', 'A', '=')
         m.add_transition('fixed', 'A', None)
         g1 = m.get_graph()
-        if self.use_pygraphviz:
-            dot_string = g1.string()
-        else:
-            dot_string = g1.source
+        dot_string = g1.string() if self.use_pygraphviz else g1.source
         try:
             self.assertRegex(dot_string, r'A\s+->\s*A\s+\[label="(fixed|reflexive)')
         except AttributeError:  # Python 2 backwards compatibility

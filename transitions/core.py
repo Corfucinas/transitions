@@ -965,7 +965,7 @@ class Machine(object):
             # since initial is not part of states it shouldn't be part of the loop either
             first_in_loop = states[0]
 
-        for i in range(0, len(states) - 1):
+        for i in range(len(states) - 1):
             self.add_transition(trigger, states[i], states[i + 1],
                                 conditions=conditions[i],
                                 unless=unless[i],
@@ -991,10 +991,7 @@ class Machine(object):
             source (str): Limits removal to transitions from a certain state.
             dest (str): Limits removal to transitions to a certain state.
         """
-        if trigger:
-            events = (self.events[trigger], )
-        else:
-            events = self.events.values()
+        events = (self.events[trigger], ) if trigger else self.events.values()
         transitions = []
         for event in events:
             transitions.extend(
@@ -1041,7 +1038,7 @@ class Machine(object):
         Returns:
             bool The truth value of all triggers combined with AND
         """
-        return all([getattr(model, trigger)(*args, **kwargs) for model in self.models])
+        return all(getattr(model, trigger)(*args, **kwargs) for model in self.models)
 
     def callbacks(self, funcs, event_data):
         """ Triggers a list of callbacks """

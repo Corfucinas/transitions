@@ -134,7 +134,7 @@ class NestedEvent(Event):
 
     def _process(self, event_data):
         machine = event_data.machine
-        machine.callbacks(event_data.machine.prepare_event, event_data)
+        machine.callbacks(machine.prepare_event, event_data)
         _LOGGER.debug("%sExecuted machine preparation callbacks before conditions.", machine.name)
 
         try:
@@ -344,10 +344,7 @@ class HierarchicalMachine(Machine):
             state = self.states[to_scope.name]
             to_scope = (state, state.states, state.events)
         elif to_scope is None:
-            if self._stack:
-                to_scope = self._stack[0]
-            else:
-                to_scope = (self, self.states, self.events)
+            to_scope = self._stack[0] if self._stack else (self, self.states, self.events)
         self._next_scope = to_scope
 
         return self
@@ -520,7 +517,7 @@ class HierarchicalMachine(Machine):
                     self.events[ev.name] = ev
                 if self.scoped.initial is None:
                     self.scoped.initial = state.initial
-            elif isinstance(state, State) and not isinstance(state, NestedState):
+            elif isinstance(state, State):
                 raise ValueError("A passed state object must derive from NestedState! "
                                  "A default State object is not sufficient")
             else:

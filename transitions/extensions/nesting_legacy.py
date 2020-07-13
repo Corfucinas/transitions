@@ -98,7 +98,7 @@ class NestedState(State):
         """
 
         temp_state = self
-        while not temp_state.value == state_name and temp_state.level > 0:
+        while temp_state.value != state_name and temp_state.level > 0:
             temp_state = temp_state.parent
         return temp_state.value == state_name
 
@@ -118,7 +118,7 @@ class NestedState(State):
         elif self.level > target_state.level:
             self.exit(event_data)
             return self.parent.exit_nested(event_data, target_state)
-        elif self.level <= target_state.level:
+        else:
             tmp_state = target_state
             while self.level != tmp_state.level:
                 tmp_state = tmp_state.parent

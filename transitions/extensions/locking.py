@@ -70,7 +70,6 @@ class IdentManager:
 
     def __enter__(self):
         self.current = get_ident()
-        pass
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.current = 0

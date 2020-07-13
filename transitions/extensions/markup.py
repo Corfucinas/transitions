@@ -82,10 +82,7 @@ class MarkupMachine(Machine):
         root[key] = []
         for state_name, state in self.states.items():
             s_def = _convert(state, self.state_attributes, self.skip_references)
-            if isinstance(state_name, Enum):
-                s_def['name'] = state_name.name
-            else:
-                s_def['name'] = state_name
+            s_def['name'] = state_name.name if isinstance(state_name, Enum) else state_name
             if getattr(state, 'states', []):
                 with self(state_name):
                     self._convert_states_and_transitions(s_def)

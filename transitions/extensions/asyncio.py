@@ -250,7 +250,7 @@ class NestedAsyncEvent(NestedEvent):
 
     async def _process(self, event_data):
         machine = event_data.machine
-        await machine.callbacks(event_data.machine.prepare_event, event_data)
+        await machine.callbacks(machine.prepare_event, event_data)
         _LOGGER.debug("%sExecuted machine preparation callbacks before conditions.", machine.name)
 
         try:
@@ -445,7 +445,11 @@ class HierarchicalAsyncMachine(HierarchicalMachine, AsyncMachine):
                     res[key] = await self._trigger_event(_model, _trigger, value, *args, **kwargs)
             if not res.get(key, None) and _trigger in self.events:
                 res[key] = await self.events[_trigger].trigger(_model, self, *args, **kwargs)
-        return None if not res or all([v is None for v in res.values()]) else any(res.values())
+        return (
+            None
+            if not res or all(v is None for v in res.values())
+            else any(res.values())
+        )
 
 
 class AsyncTimeout(AsyncState):

@@ -184,9 +184,10 @@ class NestedGraph(Graph):
                 dst_name = dst
 
             # remove ltail when dst is a child of src
-            if 'ltail' in edge_attr:
-                if _get_subgraph(container, edge_attr['ltail']).has_node(dst_name):
-                    del edge_attr['ltail']
+            if 'ltail' in edge_attr and _get_subgraph(
+                container, edge_attr['ltail']
+            ).has_node(dst_name):
+                del edge_attr['ltail']
 
             edge_attr[label_pos] = self._transition_label(transition)
             if container.has_edge(src_name, dst_name):
@@ -214,7 +215,7 @@ class NestedGraph(Graph):
         except KeyError:
             _src = src
             _dst = dst
-            if _get_subgraph(self.fsm_graph, 'cluster_' + src):
+            if _get_subgraph(self.fsm_graph, 'cluster_' + _src):
                 edge_attr['ltail'] = 'cluster_' + src
                 _src += '_anchor'
             if _get_subgraph(self.fsm_graph, 'cluster_' + dst):
