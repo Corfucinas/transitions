@@ -1,9 +1,9 @@
 # <a name="transitions-module"></a> transitions
-[![Version](https://img.shields.io/badge/version-v0.8.8-orange.svg)](https://github.com/pytransitions/transitions)
+[![Version](https://img.shields.io/badge/version-v0.8.9-orange.svg)](https://github.com/pytransitions/transitions)
 [![Build Status](https://github.com/pytransitions/transitions/actions/workflows/pytest.yml/badge.svg)](https://github.com/pytransitions/transitions/actions?query=workflow%3Apytest)
 [![Coverage Status](https://coveralls.io/repos/pytransitions/transitions/badge.svg?branch=master&service=github)](https://coveralls.io/github/pytransitions/transitions?branch=master)
 [![PyPi](https://img.shields.io/pypi/v/transitions.svg)](https://pypi.org/project/transitions)
-[![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.8.7.svg)](https://github.com/pytransitions/transitions/compare/0.8.7...master)
+[![GitHub commits](https://img.shields.io/github/commits-since/pytransitions/transitions/0.8.8.svg)](https://github.com/pytransitions/transitions/compare/0.8.8...master)
 [![License](https://img.shields.io/github/license/pytransitions/transitions.svg)](LICENSE)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pytransitions/transitions/master?filepath=examples%2FPlayground.ipynb)
 <!-- [![Pylint](https://img.shields.io/badge/pylint-9.71%2F10-green.svg)](https://github.com/pytransitions/transitions) -->
@@ -565,6 +565,16 @@ machine.add_ordered_transitions(conditions='check')
 # machine contains states (A->B, ..., X->A)
 machine = Machine(states=states, initial='A')
 machine.add_ordered_transitions(conditions=['check_A2B', ..., 'check_X2A'])
+# Conditions are always applied starting from the initial state
+machine = Machine(states=states, initial='B')
+machine.add_ordered_transitions(conditions=['check_B2C', ..., 'check_A2B'])
+# With `loop=False`, the transition from the last state to the first state will be omitted (e.g. C->A)
+# When you also pass conditions, you need to pass one condition less (len(states)-1)
+machine = Machine(states=states, initial='A')
+machine.add_ordered_transitions(loop=False)
+machine.next_state()
+machine.next_state()
+machine.next_state() # transitions.core.MachineError: "Can't trigger event next_state from state C!"
 ```
 
 #### <a name="queued-transitions"></a>Queued transitions
@@ -1136,9 +1146,9 @@ However, classes can also be directly imported from `transitions.extensions`. Th
 To use a feature-rich state machine, one could write:
 
 ```python
-from transitions.extensions import LockedHierarchicalGraphMachine as Machine
+from transitions.extensions import LockedHierarchicalGraphMachine as LHGMachine
 
-machine = Machine(model, states, transitions)
+machine = LHGMachine(model, states, transitions)
 ```
 
 #### <a name="diagrams"></a> Diagrams
@@ -1169,14 +1179,14 @@ With `Model.get_graph()` you can get the current graph or the region of interest
 ```python
 # import transitions
 
-from transitions.extensions import GraphMachine as Machine
+from transitions.extensions import GraphMachine
 m = Model()
 # without further arguments pygraphviz will be used
-machine = Machine(model=m, ...)
+machine = GraphMachine(model=m, ...)
 # when you want to use graphviz explicitly
-machine = Machine(model=m, use_pygraphviz=False, ...)
+machine = GraphMachine(model=m, use_pygraphviz=False, ...)
 # in cases where auto transitions should be visible
-machine = Machine(model=m, show_auto_transitions=True, ...)
+machine = GraphMachine(model=m, show_auto_transitions=True, ...)
 
 # draw the whole graph ...
 m.get_graph().draw('my_state_diagram.png', prog='dot')
@@ -1189,10 +1199,28 @@ This produces something like this:
 
 ![state diagram example](https://user-images.githubusercontent.com/205986/47524268-725c1280-d89a-11e8-812b-1d3b6e667b91.png)
 
+Independent of the backend you use, the draw function also accepts a file descriptor or a binary stream as the first argument. If you set this parameter to `None`, the byte stream will be returned:
+
+```python
+import io
+
+with open('a_graph.png', 'bw') as f:
+    # you need to pass the format when you pass objects instead of filenames.
+    m.get_graph().draw(f, format="png", prog='dot')
+
+# you can pass a (binary) stream too
+b = io.BytesIO()
+m.get_graph().draw(b, format="png", prog='dot')
+
+# or just handle the binary string yourself
+result = m.get_graph().draw(None, format="png", prog='dot')
+assert result == b.getvalue()
+```
+
 References and partials passed as callbacks will be resolved as good as possible:
 
 ```python
-from transitions.extensions import GraphMachine as Machine
+from transitions.extensions import GraphMachine
 from functools import partial
 
 
@@ -1204,13 +1232,13 @@ class Model:
 
 
 model = Model()
-machine = Machine(model=model, states=['A', 'B', 'C'],
-                  transitions=[
-                      {'trigger': 'clear', 'source': 'B', 'dest': 'A', 'conditions': model.clear_state},
-                      {'trigger': 'clear', 'source': 'C', 'dest': 'A',
-                       'conditions': partial(model.clear_state, False, force=True)},
-                  ],
-                  initial='A', show_conditions=True)
+machine = GraphMachine(model=model, states=['A', 'B', 'C'],
+                       transitions=[
+                           {'trigger': 'clear', 'source': 'B', 'dest': 'A', 'conditions': model.clear_state},
+                           {'trigger': 'clear', 'source': 'C', 'dest': 'A',
+                            'conditions': partial(model.clear_state, False, force=True)},
+                       ],
+                       initial='A', show_conditions=True)
 
 model.get_graph().draw('my_state_diagram.png', prog='dot')
 ```
@@ -1231,7 +1259,7 @@ To create a nested state, either import `NestedState` from transitions or use a 
 Optionally, `initial` can be used to define a sub state to transit to, when the nested state is entered.
 
 ```python
-from transitions.extensions import HierarchicalMachine as Machine
+from transitions.extensions import HierarchicalMachine
 
 states = ['standing', 'walking', {'name': 'caffeinated', 'children':['dithering', 'running']}]
 transitions = [
@@ -1242,7 +1270,7 @@ transitions = [
   ['relax', 'caffeinated', 'standing']
 ]
 
-machine = Machine(states=states, transitions=transitions, initial='standing', ignore_invalid_triggers=True)
+machine = HierarchicalMachine(states=states, transitions=transitions, initial='standing', ignore_invalid_triggers=True)
 
 machine.walk() # Walking now
 machine.stop() # let's stop for a moment
@@ -1442,7 +1470,7 @@ count_trans = [
     ['reset', '*', '1']
 ]
 
-counter = Machine(states=count_states, transitions=count_trans, initial='1')
+counter = HierarchicalMachine(states=count_states, transitions=count_trans, initial='1')
 
 counter.increase() # love my counter
 states = ['waiting', 'collecting', {'name': 'counting', 'children': counter}]
@@ -1453,7 +1481,7 @@ transitions = [
     ['count', 'collecting', 'counting']
 ]
 
-collector = Machine(states=states, transitions=transitions, initial='waiting')
+collector = HierarchicalMachine(states=states, transitions=transitions, initial='waiting')
 collector.collect()  # collecting
 collector.count()  # let's see what we got; counting_1
 collector.increase()  # counting_2
@@ -1533,7 +1561,7 @@ collector_conf = {
     'initial': 'waiting'
 }
 
-collector = Machine(**collector_conf)
+collector = HierarchicalMachine(**collector_conf)
 collector.collect()
 collector.count()
 collector.increase()
@@ -1546,12 +1574,12 @@ In cases where event dispatching is done in threads, one can use either `LockedM
 This does not save you from corrupting your machine by tinkering with member variables of your model or state machine.
 
 ```python
-from transitions.extensions import LockedMachine as Machine
+from transitions.extensions import LockedMachine
 from threading import Thread
 import time
 
 states = ['A', 'B', 'C']
-machine = Machine(states=states, initial='A')
+machine = LockedMachine(states=states, initial='A')
 
 # let us assume that entering B will take some time
 thread = Thread(target=machine.to_B)
@@ -1567,7 +1595,7 @@ machine.new_attrib = 42 # not synchronized! will mess with execution order
 Any python context manager can be passed in via the `machine_context` keyword argument:
 
 ```python
-from transitions.extensions import LockedMachine as Machine
+from transitions.extensions import LockedMachine
 from threading import RLock
 
 states = ['A', 'B', 'C']
@@ -1575,7 +1603,7 @@ states = ['A', 'B', 'C']
 lock1 = RLock()
 lock2 = RLock()
 
-machine = Machine(states=states, initial='A', machine_context=[lock1, lock2])
+machine = LockedMachine(states=states, initial='A', machine_context=[lock1, lock2])
 ```
 
 Any contexts via `machine_model` will be shared between all models registered with the `Machine`.
@@ -1829,8 +1857,8 @@ First, congratulations! You reached the end of the documentation!
 If you want to try out `transitions` before you install it, you can do that in an interactive Jupyter notebook at mybinder.org.
 Just click this button 👉 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pytransitions/transitions/master?filepath=examples%2FPlayground.ipynb).
 
-For bug reports and other issues, please open an issue on GitHub.
+For bug reports and other issues, please [open an issue](https://github.com/pytransitions/transitions) on GitHub.
 
 For usage questions, post on Stack Overflow, making sure to tag your question with the [`pytransitions` tag](https://stackoverflow.com/questions/tagged/pytransitions). Do not forget to have a look at the [extended examples](./examples)!
 
-For any other questions, solicitations, or large unrestricted monetary gifts, email [Tal Yarkoni](mailto:tyarkoni@gmail.com).
+For any other questions, solicitations, or large unrestricted monetary gifts, email [Tal Yarkoni](mailto:tyarkoni@gmail.com) (initial author) and/or [Alexander Neumann](mailto:aleneum@gmail.com) (current maintainer).

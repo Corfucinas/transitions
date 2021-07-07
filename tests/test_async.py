@@ -9,6 +9,7 @@ except (ImportError, SyntaxError):
 from unittest.mock import MagicMock
 from unittest import skipIf
 from functools import partial
+import weakref
 from .test_core import TestTransitions, MachineError
 from .utils import DummyModel
 from .test_graphviz import pgv as gv
@@ -294,7 +295,7 @@ class TestAsync(TestTransitions):
             event_data.machine.remove_model(event_data.model)
 
         def check_queue(expect, event_data):
-            self.assertEqual(expect, len(event_data.machine._transition_queue_dict[event_data.model]))
+            self.assertEqual(expect, len(event_data.machine._transition_queue_dict[id(event_data.model)]))
 
         transitions = [
             {'trigger': 'go', 'source': 'A', 'dest': 'B', 'after': partial(asyncio.sleep, 0.1)},
@@ -316,8 +317,8 @@ class TestAsync(TestTransitions):
             self.assertTrue(m1.is_B())
             self.assertTrue(m2.is_C())
             m.remove_model(m2)
-            self.assertNotIn(m1, m._transition_queue_dict)
-            self.assertNotIn(m2, m._transition_queue_dict)
+            self.assertNotIn(id(m1), m._transition_queue_dict)
+            self.assertNotIn(id(m2), m._transition_queue_dict)
             m1 = DummyModel()
             m2 = DummyModel()
             m = self.machine_cls(model=[m1, m2], states=['A', 'B', 'C'], transitions=transitions,
@@ -418,6 +419,13 @@ class TestAsync(TestTransitions):
             self.assertTrue(mock.called)
 
         asyncio.run(run())
+
+    def test_weakproxy_model(self):
+        d = DummyModel()
+        pr = weakref.proxy(d)
+        self.machine_cls(pr, states=['A', 'B'], transitions=[['go', 'A', 'B']], initial='A')
+        asyncio.run(pr.go())
+        self.assertTrue(pr.is_B())
 
 
 @skipIf(asyncio is None or (pgv is None and gv is None), "AsyncGraphMachine requires asyncio and (py)gaphviz")
